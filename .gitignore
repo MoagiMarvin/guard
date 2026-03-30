@@ -1,0 +1,10 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+.vscode/
+node_modules/
+*.txt
+*.log
+!README.md
+!requirements.txt
