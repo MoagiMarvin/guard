@@ -10,6 +10,9 @@ from agents.vuln_scanner import vuln_scanner_agent
 from agents.threat_intel import threat_intel_agent
 from agents.reporting_agent import reporting_agent
 from agents.deadman_switch import deadman_switch_agent
+from agents.ueba_agent import ueba_agent
+from agents.phishing_agent import phishing_agent
+from agents.sandbox_agent import sandbox_agent
 router = APIRouter()
 
 class QueryRequest(BaseModel):
@@ -38,6 +41,15 @@ class ReportRequest(BaseModel):
 
 class LockdownRequest(BaseModel):
     trigger_signal: str
+
+class UebaRequest(BaseModel):
+    user_activity_log: str
+
+class PhishingRequest(BaseModel):
+    email_content: str
+
+class SandboxRequest(BaseModel):
+    malware_code: str
 
 class AnalysisResponse(BaseModel):
     status: str
@@ -82,6 +94,25 @@ class LockdownResponse(BaseModel):
     simulated_encryption_progress: str
     decryption_key_storage: str
     ceo_sms_draft: str
+
+class UebaResponse(BaseModel):
+    status: str
+    anomaly_score: int
+    intent: str
+    action_required: str
+
+class PhishingResponse(BaseModel):
+    status: str
+    phishing_type: str
+    malicious_url: str
+    explanation: str
+
+class SandboxResponse(BaseModel):
+    status: str
+    threat_level: str
+    attack_family: str
+    code_intent_summary: str
+    c2_callbacks: str
 
 @router.post("/analyze/db", response_model=AnalysisResponse)
 async def analyze_db(request: QueryRequest):
@@ -194,7 +225,40 @@ async def trigger_lockdown(request: LockdownRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/ueba", response_model=UebaResponse)
+async def analyze_ueba(request: UebaRequest):
+    """
+    Analyzes authenticated employee behavior to catch Insider Threats.
+    """
+    try:
+        result = ueba_agent(request.user_activity_log)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/analyze/phishing", response_model=PhishingResponse)
+async def analyze_phishing(request: PhishingRequest):
+    """
+    Analyzes raw email content for phishing attempts and extracts callbacks.
+    """
+    try:
+        result = phishing_agent(request.email_content)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/analyze/sandbox", response_model=SandboxResponse)
+async def analyze_sandbox(request: SandboxRequest):
+    """
+    Perform static code analysis on potentially malicious scripts.
+    """
+    try:
+        result = sandbox_agent(request.malware_code)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/health")
 async def health_check():
-    agents = ["db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent", "honeypot_guard", "vuln_scanner", "threat_intel", "reporting_agent", "deadman_switch"]
+    agents = ["db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent", "honeypot_guard", "vuln_scanner", "threat_intel", "reporting_agent", "deadman_switch", "ueba_agent", "phishing_agent", "sandbox_agent"]
     return {"status": "healthy", "agents": agents}
