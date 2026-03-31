@@ -74,10 +74,38 @@ def test_active_defense_pipeline():
     except Exception as e:
         print(f"Error Pipeline: {e}")
 
+def test_honeypot_guard():
+    print("\n--- Testing Honeypot Agent ---")
+    honeypot_log = "Connection from 203.0.113.42. Attempted default credentials: root/toor on fake SSH port 2222."
+    try:
+        response = requests.post(f"{BASE_URL}/analyze/honeypot", json={"honeypot_interaction": honeypot_log})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
+def test_vuln_scanner():
+    print("\n--- Testing Vulnerability Scanner Agent ---")
+    system_config = "Ubuntu 20.04 LTS, Apache 2.4.49, OpenSSH 8.2p1, Java 8 (log4j-core-2.14.0.jar)"
+    try:
+        response = requests.post(f"{BASE_URL}/analyze/vuln", json={"system_config": system_config})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
 if __name__ == "__main__":
     print("Ensure you have the server running in another terminal (python main.py)\n")
     test_db_guard()
+    time.sleep(2)
     test_log_guard()
+    time.sleep(2)
     test_watcher_guard()
+    time.sleep(2)
     test_cloud_guard()
+    time.sleep(2)
+    test_honeypot_guard()
+    time.sleep(2)
+    test_vuln_scanner()
+    time.sleep(2)
     test_active_defense_pipeline()
