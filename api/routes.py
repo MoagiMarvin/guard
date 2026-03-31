@@ -7,6 +7,9 @@ from agents.cloud_guard import cloud_guard_agent
 from agents.ir_agent import incident_response_agent
 from agents.honeypot_guard import honeypot_guard_agent
 from agents.vuln_scanner import vuln_scanner_agent
+from agents.threat_intel import threat_intel_agent
+from agents.reporting_agent import reporting_agent
+from agents.deadman_switch import deadman_switch_agent
 router = APIRouter()
 
 class QueryRequest(BaseModel):
@@ -26,6 +29,15 @@ class HoneypotRequest(BaseModel):
 
 class VulnScanRequest(BaseModel):
     system_config: str
+
+class IntelRequest(BaseModel):
+    indicator: str
+
+class ReportRequest(BaseModel):
+    incident_logs: list
+
+class LockdownRequest(BaseModel):
+    trigger_signal: str
 
 class AnalysisResponse(BaseModel):
     status: str
@@ -51,6 +63,26 @@ class VulnScanResponse(BaseModel):
     cve_reference: str
     attack_vector: str
     remediation: str
+
+class IntelResponse(BaseModel):
+    indicator_analyzed: str
+    suspected_actor: str
+    confidence: str
+    motive: str
+    defense_intel: str
+
+class ReportResponse(BaseModel):
+    classification: str
+    executive_summary: str
+    timeline_reconstructed: list
+    remaining_risk: str
+
+class LockdownResponse(BaseModel):
+    protocol_status: str
+    simulated_encryption_progress: str
+    decryption_key_storage: str
+    ceo_sms_draft: str
+
 @router.post("/analyze/db", response_model=AnalysisResponse)
 async def analyze_db(request: QueryRequest):
     """
@@ -129,7 +161,40 @@ async def analyze_vuln(request: VulnScanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/intel", response_model=IntelResponse)
+async def analyze_intel(request: IntelRequest):
+    """
+    Cross-references an IOC with known threat actors.
+    """
+    try:
+        result = threat_intel_agent(request.indicator)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/report", response_model=ReportResponse)
+async def generate_report(request: ReportRequest):
+    """
+    Synthesizes raw SOC logs into an executive summary.
+    """
+    try:
+        result = reporting_agent(request.incident_logs)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/lockdown", response_model=LockdownResponse)
+async def trigger_lockdown(request: LockdownRequest):
+    """
+    Triggers the Zero-Day Lockdown Protocol.
+    """
+    try:
+        result = deadman_switch_agent(request.trigger_signal)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/health")
 async def health_check():
-    agents = ["db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent", "honeypot_guard", "vuln_scanner"]
+    agents = ["db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent", "honeypot_guard", "vuln_scanner", "threat_intel", "reporting_agent", "deadman_switch"]
     return {"status": "healthy", "agents": agents}

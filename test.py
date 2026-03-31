@@ -94,6 +94,39 @@ def test_vuln_scanner():
     except Exception as e:
         print(f"Error: {e}")
 
+def test_threat_intel():
+    print("\n--- Testing Threat Intel Agent ---")
+    indicator = "192.168.1.5 (Consistent SYN floods mirroring 2022 GitHub DDOS attack patterns)"
+    try:
+        response = requests.post(f"{BASE_URL}/analyze/intel", json={"indicator": indicator})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
+def test_reporting_agent():
+    print("\n--- Testing Reporting Agent ---")
+    mock_logs = [
+        {"timestamp": "10:42", "agent": "Watcher", "action": "Detected DDoS from 192.168.1.5"},
+        {"timestamp": "10:43", "agent": "IR_Agent", "action": "Blocked 192.168.1.5 via iptables"},
+        {"timestamp": "10:45", "agent": "ThreatIntel", "action": "Mapped 192.168.1.5 to Mirai Botnet"}
+    ]
+    try:
+        response = requests.post(f"{BASE_URL}/report", json={"incident_logs": mock_logs})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
+def test_deadman_switch():
+    print("\n--- Testing Dead Man Switch (Zero Day Lockdown) ---")
+    try:
+        response = requests.post(f"{BASE_URL}/lockdown", json={"trigger_signal": "MASSIVE BREACH VERIFIED. ROOT COMPROMISED. DEPLOY COUNTERMEASURES."})
+        print(f"Status Code: {response.status_code}")
+        print(json.dumps(response.json(), indent=4))
+    except Exception as e:
+        print(f"Error: {e}")
+
 if __name__ == "__main__":
     print("Ensure you have the server running in another terminal (python main.py)\n")
     test_db_guard()
@@ -109,3 +142,9 @@ if __name__ == "__main__":
     test_vuln_scanner()
     time.sleep(2)
     test_active_defense_pipeline()
+    time.sleep(2)
+    test_threat_intel()
+    time.sleep(2)
+    test_reporting_agent()
+    time.sleep(2)
+    test_deadman_switch()
