@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from typing import Any
 from agents.db_guard import db_guard_agent
 from agents.log_guard import log_guard_agent
 from agents.watcher_guard import watcher_guard_agent
@@ -13,7 +14,11 @@ from agents.deadman_switch import deadman_switch_agent
 from agents.ueba_agent import ueba_agent
 from agents.phishing_agent import phishing_agent
 from agents.sandbox_agent import sandbox_agent
+from core.orchestrator import run_soc_pipeline
+from core.database import get_all_incidents, get_all_pipeline_runs, get_incident_stats
+from core.auth import require_api_key
 router = APIRouter()
+
 
 class QueryRequest(BaseModel):
     query: str
@@ -260,5 +265,69 @@ async def analyze_sandbox(request: SandboxRequest):
 
 @router.get("/health")
 async def health_check():
-    agents = ["db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent", "honeypot_guard", "vuln_scanner", "threat_intel", "reporting_agent", "deadman_switch", "ueba_agent", "phishing_agent", "sandbox_agent"]
-    return {"status": "healthy", "agents": agents}
+    agents = [
+        "db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent",
+        "honeypot_guard", "vuln_scanner", "threat_intel", "reporting_agent",
+        "deadman_switch", "ueba_agent", "phishing_agent", "sandbox_agent"
+    ]
+    return {"status": "healthy", "version": "1.0.0", "agents": agents, "total": len(agents)}
+
+
+# ============================================================
+# ORCHESTRATOR — Full SOC Pipeline (the main product feature)
+# ============================================================
+
+class PipelineRequest(BaseModel):
+    threat_type: str  # e.g. "db", "phishing", "ueba", "sandbox", etc.
+    payload: Any      # string or dict depending on threat_type
+
+
+@router.post("/run")
+async def run_pipeline(request: PipelineRequest, _: str = Depends(require_api_key)):
+    """
+    THE MAIN ENDPOINT. Runs the full SOC pipeline for a given threat type.
+
+    threat_type options: db | log | traffic | cloud | honeypot | vuln | ueba | phishing | sandbox
+
+    - Routes to correct detection agent automatically
+    - If DANGEROUS: IR Agent + Threat Intel fire automatically
+    - If CRITICAL: Dead Man Switch fires automatically
+    - Reporting Agent always generates the executive summary
+    - Everything is saved to the database
+    """
+    try:
+        result = run_soc_pipeline(request.threat_type, request.payload)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# DATABASE ENDPOINTS — Incident History & Stats
+# ============================================================
+
+@router.get("/incidents")
+async def list_incidents(limit: int = 50, _: str = Depends(require_api_key)):
+    """Returns the most recent security incidents saved to the database."""
+    try:
+        return {"incidents": get_all_incidents(limit=limit), "count": limit}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/pipeline-runs")
+async def list_pipeline_runs(limit: int = 20, _: str = Depends(require_api_key)):
+    """Returns the most recent full SOC pipeline runs with all agent outputs."""
+    try:
+        return {"runs": get_all_pipeline_runs(limit=limit), "count": limit}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stats")
+async def get_stats(_: str = Depends(require_api_key)):
+    """Returns aggregate SOC statistics for the dashboard."""
+    try:
+        return get_incident_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
