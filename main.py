@@ -38,15 +38,27 @@ app.include_router(api_router, prefix="/api", tags=["Guard SOC"])
 
 @app.get("/")
 async def root():
-    """Serves the Premium Guard SOC Dashboard."""
+    """Serves the Premium Guard SOC Landing Page."""
     index_path = os.path.join(static_dir, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path)
-    return {
-        "message": "Welcome to Guard SOC Platform",
-        "status": "operational",
-        "dashboard_error": "static/index.html not found"
-    }
+    return {"message": "Guard SOC Active", "status": "operational"}
+
+@app.get("/dashboard")
+async def dashboard():
+    """Serves the private SOC Dashboard."""
+    dash_path = os.path.join(static_dir, "dashboard.html")
+    if os.path.exists(dash_path):
+        return FileResponse(dash_path)
+    return {"error": "Dashboard file not found"}
+
+@app.get("/join")
+async def join():
+    """Serves the Join/Signup page."""
+    auth_path = os.path.join(static_dir, "auth.html")
+    if os.path.exists(auth_path):
+        return FileResponse(auth_path)
+    return {"error": "Onboarding page not found"}
 
 if __name__ == "__main__":
     import uvicorn

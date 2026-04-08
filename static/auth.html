@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guard SOC | Join the Sentinel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0a0a0c;
+            --accent-blue: #00d2ff;
+            --accent-green: #00ff9d;
+            --text-main: #e0e0e6;
+            --text-muted: #888894;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at top, #1a1a24 0%, #0a0a0c 100%);
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 500px;
+            padding: 40px;
+            background: #121216;
+            border-radius: 24px;
+            border: 1px solid var(--glass);
+            text-align: center;
+            animation: fadeIn 0.8s;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 20px; }
+        .logo span { color: white; }
+
+        h2 { font-size: 1.8rem; margin-bottom: 10px; }
+        p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 30px; }
+
+        .input-group { text-align: left; margin-bottom: 20px; }
+        label { font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-blue); display: block; margin-bottom: 8px; }
+        input { 
+            width: 100%; 
+            padding: 15px; 
+            background: #000; 
+            border: 1px solid var(--glass); 
+            border-radius: 8px; 
+            color: white; 
+            font-size: 1rem;
+            outline: none;
+        }
+        input:focus { border-color: var(--accent-blue); }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-blue);
+            color: black;
+            font-weight: 800;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin-top: 10px;
+            text-transform: uppercase;
+        }
+
+        #key-display {
+            display: none;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 255, 157, 0.1);
+            border: 1px dashed var(--accent-green);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        #generated-key {
+            display: block;
+            font-family: monospace;
+            font-size: 1.2rem;
+            color: var(--accent-green);
+            margin: 15px 0;
+            user-select: all;
+        }
+
+        .back-link { display: block; margin-top: 20px; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; }
+        .back-link:hover { color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-container">
+        <div class="logo">GUARD<span>SOC</span></div>
+        <div id="step-signup">
+            <h2>Claim Your Sentinel Key</h2>
+            <p>Join the global network of protected infrastructure.</p>
+            
+            <div class="input-group">
+                <label>Website / App Name</label>
+                <input type="text" id="site-name" placeholder="e.g. My Website">
+            </div>
+            <div class="input-group">
+                <label>Email Address</label>
+                <input type="email" id="email" placeholder="you@example.com" value="test@guard.app">
+            </div>
+            
+            <button onclick="generateKey()">Authorize Site Protection</button>
+        </div>
+
+        <div id="key-display">
+            <h2 style="color: var(--accent-green);">Access Authorized</h2>
+            <p>Your unique Sentinel Key is ready. Add this to your <code>.env</code> file under <code>GUARD_API_KEYS</code>.</p>
+            
+            <span id="generated-key">guard-7382-xk9d-2026</span>
+            
+            <button onclick="window.location.href='/dashboard'" style="background: white;">Open SOC Dashboard</button>
+            <p style="margin-top: 15px; font-size: 0.7rem;">Make sure to copy the private key now. It will not be shown again.</p>
+        </div>
+
+        <a href="/" class="back-link">← Return to Landing Page</a>
+    </div>
+
+    <script>
+        function generateKey() {
+            const site = document.getElementById('site-name').value;
+            if (!site) return alert("Please enter your website name");
+            
+            // Random Key Mockup
+            const random = Math.random().toString(36).substring(2, 7).toUpperCase();
+            const key = `sentinel-${random}-2026`;
+            
+            document.getElementById('step-signup').style.display = 'none';
+            document.getElementById('key-display').style.display = 'block';
+            document.getElementById('generated-key').innerText = key;
+        }
+    </script>
+</body>
+</html>
