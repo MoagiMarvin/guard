@@ -352,6 +352,18 @@
         </div>
     </nav>
 
+    <!-- Marketing Scanner Bar -->
+    <div style="background: linear-gradient(90deg, #121216 0%, #1a1a24 100%); padding: 30px; border-bottom: 1px solid var(--glass); display: flex; flex-direction: column; align-items: center;">
+        <h2 style="font-size: 1.2rem; margin-bottom: 15px; color: white; letter-spacing: 1px;">🛡️ GUARD PULSE: CHECK YOUR WEBSITE SECURITY HEALTH</h2>
+        <div style="display: flex; max-width: 700px; width: 100%; gap: 10px;">
+            <input type="text" id="pulse-url" placeholder="Enter Domain (e.g. vitah.co.za)" style="margin-bottom: 0;">
+            <button onclick="runPulseScan()" style="width: 200px; margin-bottom: 0;">START FREE SCAN</button>
+        </div>
+        <div id="pulse-report-container" style="display: none; margin-top: 20px; width: 100%; max-width: 700px; animation: slideIn 0.5s;">
+            <!-- Pulse Report injected here -->
+        </div>
+    </div>
+
     <main>
         <!-- Stats Row -->
         <div class="stats-row">
@@ -417,6 +429,9 @@
                     Enter an API Key to view a specific client profile.
                 </div>
                 <input type="password" id="profile-key" placeholder="Enter X-API-Key..." value="guard-admin-demo">
+                <div style="font-size: 0.65rem; color: var(--accent-blue); margin-top: -5px; margin-bottom: 10px;">
+                    Try: vitah-soc-2026 | ul-soc-2026
+                </div>
                 <button onclick="switchProfile()" style="background: white;">Switch Profile</button>
             </div>
 
@@ -486,6 +501,54 @@
             await fetchIncidents();
             
             document.getElementById('feed-status').innerText = "POLLING LIVE...";
+        }
+
+        // Run Guard Pulse Scan (Lead Gen)
+        async function runPulseScan() {
+            const url = document.getElementById('pulse-url').value;
+            if (!url) return alert("Please enter a URL");
+            
+            const btn = document.querySelector('button[onclick="runPulseScan()"]');
+            btn.innerText = "SCANNING VULNERABILITIES...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${BASE_URL}/api/scan-site`, {
+                    method: 'POST',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: url })
+                });
+                const data = await res.json();
+                
+                const report = document.getElementById('pulse-report-container');
+                report.style.display = 'block';
+                
+                const scoreColor = data.score > 70 ? 'var(--accent-green)' : (data.score > 40 ? '#ff9d00' : 'var(--accent-red)');
+
+                report.innerHTML = `
+                    <div class="card" style="border-color: ${scoreColor}; background: rgba(0,0,0,0.5);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h3 style="color: white;">SECURITY HEALTH REPORT: ${data.url}</h3>
+                            <div style="font-size: 2rem; font-weight: 800; color: ${scoreColor}">${data.score}/100</div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <strong style="color: var(--accent-red);">TOP RISKS FOUND:</strong>
+                            <ul style="font-size: 0.85rem; margin-top: 5px; margin-left: 20px; color: var(--text-muted);">
+                                ${data.risks_found.map(r => `<li>${r}</li>`).join('')}
+                            </ul>
+                        </div>
+                        <div style="margin-top: 15px; border-top: 1px solid var(--glass); padding-top: 15px;">
+                            <p style="font-size: 0.9rem; color: white; font-style: italic;">"${data.sales_pitch}"</p>
+                            <button style="margin-top: 15px; background: ${scoreColor}; color: black;">SECURE THIS SITE WITH GUARD API</button>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                alert("Scan failed. Ensure the URL is public and Render can reach it.");
+            } finally {
+                btn.innerText = "START FREE SCAN";
+                btn.disabled = false;
+            }
         }
 
         // Fetch Incidents

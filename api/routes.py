@@ -7,7 +7,7 @@ from agents.watcher_guard import watcher_guard_agent
 from agents.cloud_guard import cloud_guard_agent
 from agents.ir_agent import incident_response_agent
 from agents.honeypot_guard import honeypot_guard_agent
-from agents.vuln_scanner import vuln_scanner_agent
+from agents.vuln_scanner import vuln_scanner_agent, public_web_scan
 from agents.threat_intel import threat_intel_agent
 from agents.reporting_agent import reporting_agent
 from agents.deadman_switch import deadman_switch_agent
@@ -65,6 +65,17 @@ class AnalysisResponse(BaseModel):
 
 class ThreatReportRequest(BaseModel):
     threat_report: dict
+
+class PublicScanRequest(BaseModel):
+    url: str
+
+class PublicScanResponse(BaseModel):
+    url: str
+    status: str
+    score: int
+    risks_found: list
+    priority_fix: str
+    sales_pitch: str
 
 class ResponseAction(BaseModel):
     mitigation_summary: str
@@ -259,6 +270,18 @@ async def analyze_sandbox(request: SandboxRequest):
     """
     try:
         result = sandbox_agent(request.malware_code)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/scan-site", response_model=PublicScanResponse)
+async def scan_public_site(request: PublicScanRequest):
+    """
+    PUBLIC ENDPOINT: Performs a non-invasive vulnerability scan of a website.
+    Used for marketing/lead generation. No API key needed for basic scans.
+    """
+    try:
+        result = public_web_scan(request.url)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

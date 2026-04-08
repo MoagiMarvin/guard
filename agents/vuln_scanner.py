@@ -1,6 +1,8 @@
 import os
 import json
 import logging
+import requests
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 import google.generativeai as genai
 
@@ -12,6 +14,63 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
+
+def public_web_scan(url: str) -> dict:
+    """
+    Performs a non-invasive public vulnerability scan of a website by analyzing its HTTP headers.
+    Used for Lead Generation / Marketing on the dashboard.
+    """
+    if not url:
+        return {"status": "FAIL", "reason": "No URL provided"}
+    
+    # Ensure URL protocol exists
+    if not url.startswith("http"):
+        url = "https://" + url
+
+    try:
+        # Fetching only the headers to stay non-invasive
+        response = requests.get(url, timeout=10, allow_redirects=True)
+        headers = dict(response.headers)
+        
+        # Adding some basic checks that don't need AI
+        missing_security_headers = [
+            h for h in ["Strict-Transport-Security", "X-Frame-Options", "Content-Security-Policy", "X-Content-Type-Options"]
+            if h not in headers
+        ]
+        
+        # AI analysis for the "Executive Report" (Sales Pitch)
+        prompt = f"""
+        You are an elite Defensive Security Analyst for Guard SOC.
+        A potential client has requested a public 'Security Health Check' for their website: {url}
+        
+        Here are their Server HTTP Headers:
+        {json.dumps(headers, indent=2)}
+        
+        Identify security risks (e.g., exposed server versions, missing HSTS, missing CSP).
+        Estimate their 'Security Score' out of 100 based ON ONLY the visible headers.
+        
+        Return your response strictly in JSON:
+        - score: (Integer 0-100)
+        - risks_found: (List of strings)
+        - priority_fix: (One sentence on the #1 most critical missing feature)
+        - sales_pitch: (One punchy sentence on why Guard SOC protection is needed based on this scan)
+        """
+        
+        ai_res = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
+        parsed = json.loads(ai_res.text)
+        
+        return {
+            "url": url,
+            "status": "COMPLETED",
+            "score": parsed.get("score", 0),
+            "risks_found": parsed.get("risks_found", []),
+            "priority_fix": parsed.get("priority_fix", "Enhance security headers."),
+            "sales_pitch": parsed.get("sales_pitch", "Protect your infrastructure from real-time attacks now."),
+            "raw_headers_analyzed": len(headers)
+        }
+    except Exception as e:
+        logger.error(f"Public Scan Error: {e}")
+        return {"status": "ERROR", "reason": str(e)}
 
 def vuln_scanner_agent(system_config: str) -> dict:
     """
