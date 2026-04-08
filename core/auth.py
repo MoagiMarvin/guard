@@ -15,36 +15,44 @@ logger = logging.getLogger(__name__)
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
-def get_valid_keys() -> set:
+def get_key_map() -> dict:
     """
-    Loads valid API keys from environment. 
-    Supports multiple keys separated by commas (e.g. for different clients).
-    GUARD_API_KEYS=key-for-ul,key-for-admin,key-for-demo
+    Loads API keys and maps them to Client Identites from environment.
+    Supports 'key:client' pairs separated by commas.
+    Example: GUARD_API_KEYS=key1:UL-University,key2:TestSite-1
     """
-    raw = os.getenv("GUARD_API_KEYS", os.getenv("GUARD_API_KEY", ""))
+    raw = os.getenv("GUARD_API_KEYS", "") # No fallback to single key for SaaS mode
     if not raw:
-        logger.warning("No GUARD_API_KEYS set in .env — auth is effectively disabled!")
-        return set()
-    return {k.strip() for k in raw.split(",") if k.strip()}
+        logger.warning("No GUARD_API_KEYS set in environment!")
+        return {}
+    
+    mapping = {}
+    for entry in raw.split(","):
+        if ":" in entry:
+            key, client = entry.split(":", 1)
+            mapping[key.strip()] = client.strip()
+        else:
+            # Legacy support: if no colon, name it 'Global'
+            mapping[entry.strip()] = "Global"
+    return mapping
 
 
 async def require_api_key(api_key: str = Security(API_KEY_HEADER)) -> str:
     """
-    FastAPI dependency. Attach to any route to protect it.
-    Usage:  async def my_route(..., _: str = Depends(require_api_key)):
+    FastAPI dependency. Returns the Client Identity (e.g. 'UL-University').
     """
-    valid_keys = get_valid_keys()
+    key_map = get_key_map()
 
-    # If no keys are configured, allow all (dev mode)
-    if not valid_keys:
+    # If no keys are configured, allow all as 'Admin' (dev mode)
+    if not key_map:
         logger.warning("Auth bypassed — no API keys configured (dev mode)")
-        return "dev-mode"
+        return "Admin"
 
-    if not api_key or api_key not in valid_keys:
+    if not api_key or api_key not in key_map:
         logger.warning("Rejected request — invalid or missing API key")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or missing API key. Include X-API-Key header."
         )
 
-    return api_key
+    return key_map[api_key]

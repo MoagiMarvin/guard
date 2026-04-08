@@ -73,13 +73,14 @@ def _extract_reason(result: dict) -> str:
     )[:500]
 
 
-def run_soc_pipeline(threat_type: str, payload) -> dict:
+def run_soc_pipeline(threat_type: str, payload, client_id: str = "Global") -> dict:
     """
     Main entry point. Runs the full SOC pipeline for a given threat type and payload.
 
     Args:
         threat_type: One of the keys in DETECTION_AGENTS (e.g. 'db', 'phishing')
         payload: The raw data to analyse (string or dict depending on agent)
+        client_id: The identity of the client (UL, TestSite, etc.)
 
     Returns:
         A dict containing the full pipeline result with all agent outputs.
@@ -106,8 +107,9 @@ def run_soc_pipeline(threat_type: str, payload) -> dict:
     detection_status = detection_result.get("status", "UNKNOWN")
     detection_level  = detection_result.get("threat_level", detection_result.get("status", "UNKNOWN"))
 
-    # Save detection result immediately
+    # Save detection result immediately with client attribution
     save_incident(
+        client_id=client_id,
         agent=agent_label,
         status=detection_status,
         threat_level=detection_level,
@@ -160,9 +162,10 @@ def run_soc_pipeline(threat_type: str, payload) -> dict:
     logger.info("STEP 5 COMPLETE — Classification: %s", report_result.get("classification"))
 
     # ----------------------------------------------------------------
-    # Save the full pipeline run to database
+    # Save the full pipeline run to database with client attribution
     # ----------------------------------------------------------------
     run_id = save_pipeline_run(
+        client_id=client_id,
         threat_type=threat_type,
         payload=payload if isinstance(payload, str) else str(payload),
         detection=detection_result,

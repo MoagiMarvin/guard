@@ -283,7 +283,7 @@ class PipelineRequest(BaseModel):
 
 
 @router.post("/run")
-async def run_pipeline(request: PipelineRequest, _: str = Depends(require_api_key)):
+async def run_pipeline(request: PipelineRequest, client_id: str = Depends(require_api_key)):
     """
     THE MAIN ENDPOINT. Runs the full SOC pipeline for a given threat type.
 
@@ -293,10 +293,10 @@ async def run_pipeline(request: PipelineRequest, _: str = Depends(require_api_ke
     - If DANGEROUS: IR Agent + Threat Intel fire automatically
     - If CRITICAL: Dead Man Switch fires automatically
     - Reporting Agent always generates the executive summary
-    - Everything is saved to the database
+    - Everything is saved to the database with Client Identity (SaaS mode)
     """
     try:
-        result = run_soc_pipeline(request.threat_type, request.payload)
+        result = run_soc_pipeline(request.threat_type, request.payload, client_id=client_id)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -307,27 +307,27 @@ async def run_pipeline(request: PipelineRequest, _: str = Depends(require_api_ke
 # ============================================================
 
 @router.get("/incidents")
-async def list_incidents(limit: int = 50, _: str = Depends(require_api_key)):
-    """Returns the most recent security incidents saved to the database."""
+async def list_incidents(limit: int = 50, client_id: str = Depends(require_api_key)):
+    """Returns the most recent security incidents saved to the database (filtered by client)."""
     try:
-        return {"incidents": get_all_incidents(limit=limit), "count": limit}
+        return {"incidents": get_all_incidents(limit=limit, client_id=client_id), "count": limit}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/pipeline-runs")
-async def list_pipeline_runs(limit: int = 20, _: str = Depends(require_api_key)):
-    """Returns the most recent full SOC pipeline runs with all agent outputs."""
+async def list_pipeline_runs(limit: int = 20, client_id: str = Depends(require_api_key)):
+    """Returns the most recent full SOC pipeline runs with all agent outputs (filtered by client)."""
     try:
-        return {"runs": get_all_pipeline_runs(limit=limit), "count": limit}
+        return {"runs": get_all_pipeline_runs(limit=limit, client_id=client_id), "count": limit}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/stats")
-async def get_stats(_: str = Depends(require_api_key)):
-    """Returns aggregate SOC statistics for the dashboard."""
+async def get_stats(client_id: str = Depends(require_api_key)):
+    """Returns aggregate SOC statistics for the dashboard (filtered by client)."""
     try:
-        return get_incident_stats()
+        return get_incident_stats(client_id=client_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

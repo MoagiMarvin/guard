@@ -32,6 +32,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS incidents (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp   TEXT    NOT NULL,
+                client_id   TEXT    NOT NULL,
                 agent       TEXT    NOT NULL,
                 status      TEXT    NOT NULL,
                 threat_level TEXT   NOT NULL,
@@ -43,6 +44,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS pipeline_runs (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp       TEXT    NOT NULL,
+                client_id       TEXT    NOT NULL,
                 threat_type     TEXT    NOT NULL,
                 payload         TEXT,
                 detection       TEXT,
@@ -53,11 +55,17 @@ def init_db():
                 final_status    TEXT    NOT NULL
             )
         """)
+        # Migration: Add client_id if it's missing (for existing users)
+        try:
+            conn.execute("ALTER TABLE incidents ADD COLUMN client_id TEXT DEFAULT 'Global'")
+            conn.execute("ALTER TABLE pipeline_runs ADD COLUMN client_id TEXT DEFAULT 'Global'")
+        except sqlite3.OperationalError:
+            pass # Column already exists
         conn.commit()
     logger.info("Guard SOC database initialised at %s", DB_PATH)
 
 
-def save_incident(agent: str, status: str, threat_level: str, payload: str, result: dict) -> int:
+def save_incident(client_id: str, agent: str, status: str, threat_level: str, payload: str, result: dict) -> int:
     """
     Saves a single detection agent result to the incidents table.
     Returns the new row ID.
@@ -65,11 +73,12 @@ def save_incident(agent: str, status: str, threat_level: str, payload: str, resu
     with get_connection() as conn:
         cursor = conn.execute(
             """
-            INSERT INTO incidents (timestamp, agent, status, threat_level, payload, result)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO incidents (timestamp, client_id, agent, status, threat_level, payload, result)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.utcnow().isoformat(),
+                client_id,
                 agent,
                 status,
                 threat_level,
@@ -84,6 +93,7 @@ def save_incident(agent: str, status: str, threat_level: str, payload: str, resu
 
 
 def save_pipeline_run(
+    client_id: str,
     threat_type: str,
     payload: str,
     detection: dict,
@@ -101,11 +111,12 @@ def save_pipeline_run(
         cursor = conn.execute(
             """
             INSERT INTO pipeline_runs
-                (timestamp, threat_type, payload, detection, ir_response, threat_intel, report, deadman_fired, final_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (timestamp, client_id, threat_type, payload, detection, ir_response, threat_intel, report, deadman_fired, final_status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 datetime.utcnow().isoformat(),
+                client_id,
                 threat_type,
                 str(payload)[:2000],
                 json.dumps(detection) if detection else None,
@@ -122,33 +133,52 @@ def save_pipeline_run(
         return run_id
 
 
-def get_all_incidents(limit: int = 100) -> list:
-    """Returns the most recent incidents, newest first."""
+def get_all_incidents(limit: int = 100, client_id: str = "Admin") -> list:
+    """Returns the most recent incidents, filtered by client unless identity is 'Admin'."""
     with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM incidents ORDER BY id DESC LIMIT ?", (limit,)
-        ).fetchall()
+        if client_id == "Admin":
+            rows = conn.execute(
+                "SELECT * FROM incidents ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM incidents WHERE client_id = ? ORDER BY id DESC LIMIT ?", (client_id, limit)
+            ).fetchall()
         return [dict(r) for r in rows]
 
 
-def get_all_pipeline_runs(limit: int = 50) -> list:
-    """Returns the most recent pipeline runs, newest first."""
+def get_all_pipeline_runs(limit: int = 50, client_id: str = "Admin") -> list:
+    """Returns the most recent pipeline runs, filtered by client unless identity is 'Admin'."""
     with get_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT ?", (limit,)
-        ).fetchall()
+        if client_id == "Admin":
+            rows = conn.execute(
+                "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM pipeline_runs WHERE client_id = ? ORDER BY id DESC LIMIT ?", (client_id, limit)
+            ).fetchall()
         return [dict(r) for r in rows]
 
 
-def get_incident_stats() -> dict:
-    """Returns aggregate stats for the dashboard."""
+def get_incident_stats(client_id: str = "Admin") -> dict:
+    """Returns aggregate stats, filtered by client unless identity is 'Admin'."""
     with get_connection() as conn:
-        total = conn.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
-        dangerous = conn.execute("SELECT COUNT(*) FROM incidents WHERE status = 'DANGEROUS'").fetchone()[0]
-        critical = conn.execute("SELECT COUNT(*) FROM incidents WHERE threat_level = 'CRITICAL'").fetchone()[0]
-        pipeline_runs = conn.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone()[0]
-        deadman_activations = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE deadman_fired = 1").fetchone()[0]
+        if client_id == "Admin":
+            total = conn.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
+            dangerous = conn.execute("SELECT COUNT(*) FROM incidents WHERE status = 'DANGEROUS'").fetchone()[0]
+            critical = conn.execute("SELECT COUNT(*) FROM incidents WHERE threat_level = 'CRITICAL'").fetchone()[0]
+            pipeline_runs = conn.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone()[0]
+            deadman_activations = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE deadman_fired = 1").fetchone()[0]
+        else:
+            total = conn.execute("SELECT COUNT(*) FROM incidents WHERE client_id = ?", (client_id,)).fetchone()[0]
+            dangerous = conn.execute("SELECT COUNT(*) FROM incidents WHERE client_id = ? AND status = 'DANGEROUS'", (client_id,)).fetchone()[0]
+            critical = conn.execute("SELECT COUNT(*) FROM incidents WHERE client_id = ? AND threat_level = 'CRITICAL'", (client_id,)).fetchone()[0]
+            pipeline_runs = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE client_id = ?", (client_id,)).fetchone()[0]
+            deadman_activations = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE client_id = ? AND deadman_fired = 1", (client_id,)).fetchone()[0]
+        
         return {
+            "identity": client_id,
             "total_incidents": total,
             "dangerous_incidents": dangerous,
             "critical_incidents": critical,

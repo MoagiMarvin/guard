@@ -1,7 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from api.routes import router as api_router
 from core.database import init_db
+from core.auth import require_api_key  # for testing
 
 app = FastAPI(
     title="Guard SOC Platform",
@@ -23,18 +27,25 @@ async def startup_event():
     """Initialise the database and all tables on server start."""
     init_db()
 
+# Mount the static directory to serve CSS/JS (if needed)
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 # Include the API routes
 app.include_router(api_router, prefix="/api", tags=["Guard SOC"])
 
 @app.get("/")
 async def root():
+    """Serves the Premium Guard SOC Dashboard."""
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
     return {
         "message": "Welcome to Guard SOC Platform",
-        "version": "1.0.0",
-        "docs": "/docs",
         "status": "operational",
-        "agents": 13,
-        "endpoints": "/api/docs"
+        "dashboard_error": "static/index.html not found"
     }
 
 if __name__ == "__main__":
