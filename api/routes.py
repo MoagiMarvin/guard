@@ -286,6 +286,18 @@ async def scan_public_site(request: PublicScanRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/phishing-check", response_model=PhishingResponse)
+async def public_phishing_check(request: PhishingRequest):
+    """
+    PUBLIC ENDPOINT: Analyzes email content for phishing/scam intent.
+    Used for free lead generation on the landing page.
+    """
+    try:
+        result = phishing_agent(request.email_content)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/health")
 async def health_check():
     agents = [
