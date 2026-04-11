@@ -144,25 +144,75 @@
             text-transform: uppercase;
         }
 
-        /* Section: Pulse Pulse (Marketing) */
-        #pulse-results {
-            width: 100%;
-            max-width: 800px;
-            margin-top: 30px;
-            display: none;
-            animation: fadeIn 1s;
+        /* Command Center Container */
+        .command-center {
+            padding: 120px 60px 40px 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 90vh;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .tab-switcher {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 40px;
+            background: var(--glass);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
 
-        /* Pricing */
-        .pricing {
-            padding: 100px 60px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-muted);
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.4s;
+        }
+
+        .tab-btn.active.site {
+            background: rgba(0, 210, 255, 0.1);
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 20px rgba(0, 210, 255, 0.2);
+        }
+
+        .tab-btn.active.phishing {
+            background: rgba(0, 255, 157, 0.1);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+            box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+        }
+
+        .tab-content {
+            width: 100%;
+            max-width: 900px;
+            display: none;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .tab-content.active { display: block; }
+
+        @keyframes slideUp { 
+            from { opacity: 0; transform: translateY(30px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .intel-card {
+            background: #121216;
+            border: 1px solid var(--glass);
+            padding: 50px;
+            border-radius: 30px;
+            text-align: center;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.5);
+            width: 100%;
         }
 
         .price-card {
@@ -207,39 +257,50 @@
         </div>
     </nav>
 
-    <div class="hero" id="pulse">
-        <h1>Sentinel for the<br>Modern Digital World</h1>
-        <p>AI-Powered 13-Agent Orchestration. Real-time Threat Intelligence. Automated Incident Response. All in one unified platform.</p>
-        
-        <div class="scanner-container">
-            <input type="text" id="target-url" placeholder="Enter Website Domain (e.g. vitah.co.za)">
-            <button onclick="runLandingScan()">Start Free Scan</button>
+    <div class="command-center">
+        <h1>Sentinel Command Center</h1>
+        <p style="color: var(--text-muted); margin-bottom: 40px;">Select an intelligence tool to begin your proactive security check.</p>
+
+        <div class="tab-switcher">
+            <button class="tab-btn active site" onclick="switchTab('site')">Site Sentinel</button>
+            <button class="tab-btn phishing" onclick="switchTab('phishing')">Phishing Sentinel</button>
         </div>
 
-        <div style="margin-top: 20px; display: flex; gap: 20px; align-items: center;">
-            <label style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                <input type="checkbox" id="deep-scan-toggle" style="width: auto; margin-bottom: 0;"> 
-                <span>Enable Deep AI Recon (PRO)</span>
-            </label>
+        <!-- Tab 1: Site Sentinel -->
+        <div id="tab-site" class="tab-content active">
+            <div class="intel-card" style="border-color: var(--accent-blue);">
+                <h2 style="margin-bottom: 10px;">Website Vulnerability Scan</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Perform a non-invasive header audit of any public domain.</p>
+                
+                <div class="scanner-container" style="margin: 0 auto;">
+                    <input type="text" id="target-url" placeholder="e.g. vitah.co.za">
+                    <button onclick="runLandingScan()">Analyze Site</button>
+                </div>
+
+                <div style="margin-top: 20px; display: flex; justify-content: center;">
+                    <label style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                        <input type="checkbox" id="deep-scan-toggle" style="width: auto; margin-bottom: 0;"> 
+                        <span>Enable Deep AI Recon (PRO)</span>
+                    </label>
+                </div>
+
+                <div id="pulse-results" style="margin-top: 40px; text-align: left;"></div>
+            </div>
         </div>
 
-        <div id="pulse-results">
-            <!-- Results injected here -->
-        </div>
-    </div>
+        <!-- Tab 2: Phishing Sentinel -->
+        <div id="tab-phishing" class="tab-content">
+            <div class="intel-card" style="border-color: var(--accent-green);">
+                <h2 style="margin-bottom: 10px;">Phishing Intelligence Tool</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Scan suspicious emails for social engineering and malicious links.</p>
+                
+                <div style="max-width: 800px; margin: 0 auto;">
+                    <textarea id="phishing-content" placeholder="Paste email content here..." style="width: 100%; height: 200px; background: #000; color: white; border: 1px solid var(--glass); border-radius: 12px; padding: 20px; outline: none;"></textarea>
+                    <button onclick="runPhishingScan()" style="width: 100%; padding: 18px; background: var(--accent-green); color: black; font-weight: 800; border-radius: 12px; margin-top: 20px; cursor: pointer;">DETECT THREATS</button>
+                </div>
 
-    <!-- Phishing Simulator Section -->
-    <div style="background: #121216; padding: 100px 60px; text-align: center; border-bottom: 1px solid var(--glass);">
-        <h2 style="font-size: 2.5rem; font-weight: 800; margin-bottom: 20px;">🛡️ PHISHING INTELLIGENCE</h2>
-        <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto 40px auto;">Suspicious email? Paste the content here. Our Phishing Agent will analyze it for social engineering and malicious intent—instantly.</p>
-        
-        <div style="max-width: 800px; margin: 0 auto; background: var(--glass); padding: 30px; border-radius: 20px; border: 1px solid rgba(0, 210, 255, 0.1);">
-            <textarea id="phishing-content" placeholder="Paste full email content here (excluding sender details if desired)..." style="width: 100%; height: 150px; background: #000; color: white; border: 1px solid var(--glass); border-radius: 8px; padding: 15px; margin-bottom: 20px; outline: none;"></textarea>
-            <button onclick="runPhishingScan()" style="width: 100%; padding: 15px; background: var(--accent-green); color: black; font-weight: 800; border-radius: 8px; font-size: 1rem; cursor: pointer;">ANALYZE EMAIL SAFETY</button>
-        </div>
-
-        <div id="phishing-results" style="display: none; width: 100%; max-width: 800px; margin: 30px auto 0 auto; text-align: left; animation: fadeIn 0.8s;">
-            <!-- Phishing Results injected here -->
+                <div id="phishing-results" style="margin-top: 40px; text-align: left;"></div>
+            </div>
         </div>
     </div>
 
@@ -285,6 +346,17 @@
 
     <script>
         const BASE_URL = window.location.origin;
+
+        function switchTab(tab) {
+            // Update Buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.querySelector(`.tab-btn.${tab}`);
+            activeBtn.classList.add('active');
+
+            // Update Content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
 
         async function runLandingScan() {
             const url = document.getElementById('target-url').value;
