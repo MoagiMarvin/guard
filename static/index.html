@@ -336,9 +336,11 @@
             } catch (e) {
                 alert("Scan failed. Ensure Render is live.");
             } finally {
-                btn.innerText = "Start Scan";
+                btn.innerText = "Start Free Scan";
                 btn.disabled = false;
             }
+        }
+
         async function runPhishingScan() {
             const content = document.getElementById('phishing-content').value;
             if (!content) return alert("Please paste an email to analyze");
