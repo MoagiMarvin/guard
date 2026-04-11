@@ -70,7 +70,14 @@ def public_web_scan(url: str) -> dict:
         }
     except Exception as e:
         logger.error(f"Public Scan Error: {e}")
-        return {"status": "ERROR", "reason": str(e)}
+        return {
+            "url": url,
+            "status": "ERROR",
+            "score": 0,
+            "risks_found": ["Scan Failed: " + str(e)],
+            "priority_fix": "Verify domain is public and reachable.",
+            "sales_pitch": "Connection failed. Secure your infrastructure to prevent downtime."
+        }
 
 def vuln_scanner_agent(system_config: str) -> dict:
     """

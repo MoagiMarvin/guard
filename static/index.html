@@ -313,6 +313,17 @@
                 const results = document.getElementById('pulse-results');
                 results.style.display = 'block';
                 
+                if (data.status === "ERROR") {
+                    results.innerHTML = `
+                        <div style="background: rgba(40, 20, 20, 0.9); border: 1px solid #ff3e3e; padding: 30px; border-radius: 20px;">
+                            <h2 style="color: #ff3e3e; font-size: 1.2rem;">SCAN ENCOUNTERED AN ERROR</h2>
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 10px;">${data.risks_found[0]}</p>
+                            <p style="color: white; font-size: 0.8rem; margin-top: 15px;">${data.priority_fix}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const scoreColor = data.score > 70 ? '#00ff9d' : (data.score > 40 ? '#ff9d00' : '#ff3e3e');
 
                 results.innerHTML = `
@@ -360,6 +371,16 @@
                 const results = document.getElementById('phishing-results');
                 results.style.display = 'block';
                 
+                if (data.status === "ERROR") {
+                    results.innerHTML = `
+                        <div style="background: rgba(40, 20, 20, 0.9); border: 1px solid #ff3e3e; padding: 30px; border-radius: 20px;">
+                            <h2 style="color: #ff3e3e; font-size: 1.2rem;">AI ENGINE ERROR</h2>
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 10px;">${data.explanation}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
                 const statusColor = data.status === "SAFE" ? '#00ff9d' : '#ff3e3e';
 
                 results.innerHTML = `

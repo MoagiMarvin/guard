@@ -78,9 +78,8 @@ def phishing_agent(email_content: str) -> dict:
     except Exception as e:
         logger.error(f"Phishing AI Error: {e}")
         return {
-            "log": "Phishing Scan Error",
             "status": "ERROR",
             "phishing_type": "None",
             "malicious_url": "None",
-            "explanation": f"Agent failed: {str(e)}"
+            "explanation": f"The Sentinel engine hit an error while analyzing the content: {str(e)}"
         }
