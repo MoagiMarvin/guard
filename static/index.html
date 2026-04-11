@@ -263,7 +263,7 @@
 
         <div class="tab-switcher">
             <button class="tab-btn active site" onclick="switchTab('site')">Site Sentinel</button>
-            <button class="tab-btn phishing" onclick="switchTab('phishing')">Phishing Sentinel</button>
+            <button class="tab-btn phishing" onclick="switchTab('phishing')">S.E. Intel</button>
         </div>
 
         <!-- Tab 1: Site Sentinel -->
@@ -288,15 +288,15 @@
             </div>
         </div>
 
-        <!-- Tab 2: Phishing Sentinel -->
+        <!-- Tab 2: S.E. Intel -->
         <div id="tab-phishing" class="tab-content">
             <div class="intel-card" style="border-color: var(--accent-green);">
-                <h2 style="margin-bottom: 10px;">Phishing Intelligence Tool</h2>
-                <p style="color: var(--text-muted); margin-bottom: 30px;">Scan suspicious emails for social engineering and malicious links.</p>
+                <h2 style="margin-bottom: 10px;">Social Engineering Intelligence</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">Scan suspicious Emails, SMS Links, or Website Forms for malicious intent.</p>
                 
                 <div style="max-width: 800px; margin: 0 auto;">
-                    <textarea id="phishing-content" placeholder="Paste email content here..." style="width: 100%; height: 200px; background: #000; color: white; border: 1px solid var(--glass); border-radius: 12px; padding: 20px; outline: none;"></textarea>
-                    <button onclick="runPhishingScan()" style="width: 100%; padding: 18px; background: var(--accent-green); color: black; font-weight: 800; border-radius: 12px; margin-top: 20px; cursor: pointer;">DETECT THREATS</button>
+                    <textarea id="phishing-content" placeholder="Paste Email text, suspicious Link, or Website Form content here..." style="width: 100%; height: 200px; background: #000; color: white; border: 1px solid var(--glass); border-radius: 12px; padding: 20px; outline: none;"></textarea>
+                    <button onclick="runPhishingScan()" style="width: 100%; padding: 18px; background: var(--accent-green); color: black; font-weight: 800; border-radius: 12px; margin-top: 20px; cursor: pointer;">DETECT DECEPTION</button>
                 </div>
 
                 <div id="phishing-results" style="margin-top: 40px; text-align: left;"></div>
