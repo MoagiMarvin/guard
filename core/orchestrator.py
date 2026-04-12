@@ -23,6 +23,8 @@ from agents.vuln_scanner import vuln_scanner_agent
 from agents.ueba_agent import ueba_agent
 from agents.phishing_agent import phishing_agent
 from agents.sandbox_agent import sandbox_agent
+from agents.auth_guard import auth_guard_agent
+from agents.dark_intel_agent import dark_intel_agent
 from agents.ir_agent import incident_response_agent
 from agents.threat_intel import threat_intel_agent
 from agents.reporting_agent import reporting_agent
@@ -45,6 +47,8 @@ DETECTION_AGENTS = {
     "ueba":      {"fn": ueba_agent,           "arg": "user_activity_log",   "label": "UEBA Agent"},
     "phishing":  {"fn": phishing_agent,       "arg": "email_content",       "label": "Phishing Agent"},
     "sandbox":   {"fn": sandbox_agent,        "arg": "malware_code",        "label": "Sandbox Agent"},
+    "auth":      {"fn": auth_guard_agent,     "arg": "request_data",        "label": "Auth Guard"},
+    "dark_intel": {"fn": dark_intel_agent,    "arg": "target_info",         "label": "Dark Intel"},
 }
 
 def _is_dangerous(result: dict) -> bool:

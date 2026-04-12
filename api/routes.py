@@ -14,6 +14,8 @@ from agents.deadman_switch import deadman_switch_agent
 from agents.ueba_agent import ueba_agent
 from agents.phishing_agent import phishing_agent
 from agents.sandbox_agent import sandbox_agent
+from agents.auth_guard import auth_guard_agent
+from agents.dark_intel_agent import dark_intel_agent
 from core.orchestrator import run_soc_pipeline
 from core.database import get_all_incidents, get_all_pipeline_runs, get_incident_stats
 from core.auth import require_api_key
@@ -55,6 +57,12 @@ class PhishingRequest(BaseModel):
 
 class SandboxRequest(BaseModel):
     malware_code: str
+
+class AuthRequest(BaseModel):
+    request_data: str
+
+class DarkIntelRequest(BaseModel):
+    target_info: str
 
 class AnalysisResponse(BaseModel):
     status: str
@@ -274,6 +282,28 @@ async def analyze_sandbox(request: SandboxRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/analyze/auth", response_model=AnalysisResponse)
+async def analyze_auth(request: AuthRequest):
+    """
+    Analyzes identity and access control patterns for BAC / IDOR threats.
+    """
+    try:
+        result = auth_guard_agent(request.request_data)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/analyze/dark-intel", response_model=AnalysisResponse)
+async def analyze_dark_intel(request: DarkIntelRequest):
+    """
+    Scans underground forums for mentions of target info.
+    """
+    try:
+        result = dark_intel_agent(request.target_info)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.post("/scan-site", response_model=PublicScanResponse)
 async def scan_public_site(request: PublicScanRequest):
     """
@@ -303,7 +333,7 @@ async def health_check():
     agents = [
         "db_guard", "log_guard", "watcher_guard", "cloud_guard", "ir_agent",
         "honeypot_guard", "vuln_scanner", "threat_intel", "reporting_agent",
-        "deadman_switch", "ueba_agent", "phishing_agent", "sandbox_agent"
+        "deadman_switch", "ueba_agent", "phishing_agent", "sandbox_agent", "auth_guard", "dark_intel"
     ]
     return {"status": "healthy", "version": "1.0.0", "agents": agents, "total": len(agents)}
 
