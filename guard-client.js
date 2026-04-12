@@ -12,8 +12,8 @@
 const fetch = require('node-fetch'); // Standard for older Node versions
 
 const GUARD_CONFIG = {
-    endpoint: "https://guard-au3s.onrender.com/api/run",
-    apiKey: process.env.GUARD_SOC_KEY || "your-provided-key-here"
+    endpoint: "https://guard-soc.onrender.com/api/run",
+    apiKey: process.env.GUARD_KEY || "your-key-here"
 };
 
 /**

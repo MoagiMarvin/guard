@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guard SOC | Join the Sentinel</title>
+    <title>GUARD | Secure Access</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -29,21 +29,19 @@
 
         .auth-container {
             width: 100%;
-            max-width: 500px;
-            padding: 40px;
+            max-width: 450px;
+            padding: 50px;
             background: #121216;
             border-radius: 24px;
             border: 1px solid var(--glass);
             text-align: center;
-            animation: fadeIn 0.8s;
+            box-shadow: 0 50px 100px rgba(0,0,0,0.5);
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-
-        .logo { font-size: 1.5rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 20px; }
+        .logo { font-size: 1.8rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 30px; letter-spacing: -1px; }
         .logo span { color: white; }
 
-        h2 { font-size: 1.8rem; margin-bottom: 10px; }
+        h2 { font-size: 1.5rem; margin-bottom: 10px; }
         p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 30px; }
 
         .input-group { text-align: left; margin-bottom: 20px; }
@@ -53,95 +51,155 @@
             padding: 15px; 
             background: #000; 
             border: 1px solid var(--glass); 
-            border-radius: 8px; 
+            border-radius: 10px; 
             color: white; 
             font-size: 1rem;
             outline: none;
+            transition: all 0.3s;
         }
-        input:focus { border-color: var(--accent-blue); }
+        input:focus { border-color: var(--accent-blue); box-shadow: 0 0 15px rgba(0, 210, 255, 0.1); }
 
         button {
             width: 100%;
-            padding: 15px;
+            padding: 16px;
             background: var(--accent-blue);
             color: black;
             font-weight: 800;
             border: none;
-            border-radius: 8px;
-            font-size: 1rem;
+            border-radius: 10px;
+            font-size: 0.9rem;
             cursor: pointer;
             margin-top: 10px;
             text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s;
         }
+        button:hover { filter: brightness(1.1); transform: translateY(-2px); }
 
-        #key-display {
-            display: none;
-            margin-top: 30px;
-            padding: 20px;
-            background: rgba(0, 255, 157, 0.1);
-            border: 1px dashed var(--accent-green);
-            border-radius: 8px;
-            text-align: center;
-        }
+        .toggle-link { display: block; margin-top: 25px; color: var(--text-muted); text-decoration: none; font-size: 0.85rem; }
+        .toggle-link span { color: var(--accent-blue); font-weight: 600; }
 
-        #generated-key {
-            display: block;
-            font-family: monospace;
-            font-size: 1.2rem;
-            color: var(--accent-green);
-            margin: 15px 0;
-            user-select: all;
-        }
+        #error-msg { color: #ff3e3e; font-size: 0.8rem; margin-top: 15px; display: none; }
 
-        .back-link { display: block; margin-top: 20px; color: var(--text-muted); text-decoration: none; font-size: 0.8rem; }
-        .back-link:hover { color: white; }
+        #success-onboarding { display: none; }
+        code { background: #000; padding: 4px 8px; border-radius: 4px; color: var(--accent-green); font-family: monospace; }
     </style>
 </head>
 <body>
 
     <div class="auth-container">
-        <div class="logo">GUARD<span>SOC</span></div>
-        <div id="step-signup">
-            <h2>Claim Your Sentinel Key</h2>
-            <p>Join the global network of protected infrastructure.</p>
+        <div class="logo">GUARD</div>
+
+        <!-- Mode: Login -->
+        <div id="view-login">
+            <h2>Welcome Back</h2>
+            <p>Access your Security Command Center</p>
             
             <div class="input-group">
-                <label>Website / App Name</label>
-                <input type="text" id="site-name" placeholder="e.g. My Website">
+                <label>Email Address</label>
+                <input type="email" id="login-email" placeholder="you@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="login-pass" placeholder="••••••••">
+            </div>
+            
+            <button onclick="handleLogin()">Login to SOC</button>
+            <a href="#" class="toggle-link" onclick="toggleMode('signup')">Don't have an account? <span>Sign Up</span></a>
+        </div>
+
+        <!-- Mode: Signup -->
+        <div id="view-signup" style="display: none;">
+            <h2>Start Protecting</h2>
+            <p>Create your GUARD account in seconds</p>
+            
+            <div class="input-group">
+                <label>Website Name</label>
+                <input type="text" id="signup-site" placeholder="e.g. My Rental App">
             </div>
             <div class="input-group">
                 <label>Email Address</label>
-                <input type="email" id="email" placeholder="you@example.com" value="test@guard.app">
+                <input type="email" id="signup-email" placeholder="you@example.com">
+            </div>
+            <div class="input-group">
+                <label>Password</label>
+                <input type="password" id="signup-pass" placeholder="••••••••">
             </div>
             
-            <button onclick="generateKey()">Authorize Site Protection</button>
+            <button onclick="handleSignup()">Create Account</button>
+            <a href="#" class="toggle-link" onclick="toggleMode('login')">Already protected? <span>Login Here</span></a>
         </div>
 
-        <div id="key-display">
-            <h2 style="color: var(--accent-green);">Access Authorized</h2>
-            <p>Your unique Sentinel Key is ready. Add this to your <code>.env</code> file under <code>GUARD_API_KEYS</code>.</p>
-            
-            <span id="generated-key">guard-7382-xk9d-2026</span>
-            
-            <button onclick="window.location.href='/dashboard'" style="background: white;">Open SOC Dashboard</button>
-            <p style="margin-top: 15px; font-size: 0.7rem;">Make sure to copy the private key now. It will not be shown again.</p>
+        <!-- Mode: Success -->
+        <div id="success-onboarding">
+            <h2 style="color: var(--accent-green);">Account Created</h2>
+            <p>Your GUARD account is ready. Your unique Shield Key has been generated.</p>
+            <button onclick="window.location.href='/dashboard'">Enter Dashboard</button>
         </div>
 
-        <a href="/" class="back-link">← Return to Landing Page</a>
+        <div id="error-msg"></div>
     </div>
 
     <script>
-        function generateKey() {
-            const site = document.getElementById('site-name').value;
-            if (!site) return alert("Please enter your website name");
-            
-            // Random Key Mockup
-            const random = Math.random().toString(36).substring(2, 7).toUpperCase();
-            const key = `sentinel-${random}-2026`;
-            
-            document.getElementById('step-signup').style.display = 'none';
-            document.getElementById('key-display').style.display = 'block';
-            document.getElementById('generated-key').innerText = key;
+        const BASE_URL = window.location.origin;
+
+        function toggleMode(mode) {
+            document.getElementById('view-login').style.display = mode === 'login' ? 'block' : 'none';
+            document.getElementById('view-signup').style.display = mode === 'signup' ? 'block' : 'none';
+            document.getElementById('error-msg').style.display = 'none';
+        }
+
+        async function handleSignup() {
+            const site = document.getElementById('signup-site').value;
+            const email = document.getElementById('signup-email').value;
+            const pass = document.getElementById('signup-pass').value;
+            const error = document.getElementById('error-msg');
+
+            if (!site || !email || !pass) return showUIError("All fields are required");
+
+            try {
+                const res = await fetch(`${BASE_URL}/api/auth/signup`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: pass, site_name: site })
+                });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    localStorage.setItem('guard_token', data.access_token);
+                    document.getElementById('view-signup').style.display = 'none';
+                    document.getElementById('success-onboarding').style.display = 'block';
+                } else {
+                    showUIError(data.detail || "Signup failed");
+                }
+            } catch (e) { showUIError("Connection error. Is the server live?"); }
+        }
+
+        async function handleLogin() {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-pass').value;
+
+            try {
+                const res = await fetch(`${BASE_URL}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password: pass })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem('guard_token', data.access_token);
+                    window.location.href = '/dashboard';
+                } else {
+                    showUIError(data.detail || "Invalid credentials");
+                }
+            } catch (e) { showUIError("Connection error"); }
+        }
+
+        function showUIError(msg) {
+            const error = document.getElementById('error-msg');
+            error.innerText = msg;
+            error.style.display = 'block';
         }
     </script>
 </body>

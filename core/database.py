@@ -1,187 +1,188 @@
 """
-Guard SOC - Incident Database Layer
-Stores every alert, detection result, and pipeline run permanently.
-Uses Python's built-in sqlite3 — zero extra dependencies.
+GUARD - Secure Database Layer
+Handles permanent storage for Users, Clients, and Security Incidents.
+Supports both Local SQLite (for development) and Supabase Postgres (for production).
 """
-import sqlite3
+import os
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
+from sqlalchemy import create_engine, Column, Integer, String, Text, Boolean, JSON, DateTime, ForeignKey
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, relationship
+from dotenv import load_dotenv
 
+load_dotenv()
 logger = logging.getLogger(__name__)
 
-# Database lives in the project root
-DB_PATH = Path(__file__).parent.parent / "guard_soc.db"
+# Choose engine based on environment
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    # Fallback to local SQLite if no DATABASE_URL is provided
+    DATABASE_URL = "sqlite:///./guard_soc.db"
+    logger.warning("No DATABASE_URL found. Falling back to local SQLite.")
+
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
 
 
-def get_connection() -> sqlite3.Connection:
-    """Returns a database connection with row factory for dict-like access."""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+# ==========================================
+# DATABASE MODELS
+# ==========================================
 
+class User(Base):
+    """Stores GUARD Dashboard users (the site owners/developers)."""
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to protected sites
+    clients = relationship("Client", back_populates="owner")
+
+class Client(Base):
+    """Stores protected site configurations and their API keys."""
+    __tablename__ = "clients"
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    site_name = Column(String, nullable=False)
+    api_key = Column(String, unique=True, index=True, nullable=False)
+    plan_type = Column(String, default="FREE")  # FREE, SENTINEL, ENTERPRISE
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    owner = relationship("User", back_populates="clients")
+
+class Incident(Base):
+    """Stores single security detections."""
+    __tablename__ = "incidents"
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    client_id = Column(String, index=True, nullable=False) # Maps to API Key
+    agent = Column(String, nullable=False)
+    status = Column(String, nullable=False)
+    threat_level = Column(String, nullable=False)
+    payload = Column(Text)
+    result = Column(JSON, nullable=False)
+
+class PipelineRun(Base):
+    """Stores full multi-agent SOC responses."""
+    __tablename__ = "pipeline_runs"
+    id = Column(Integer, primary_key=True, index=True)
+    timestamp = Column(DateTime, default=datetime.utcnow)
+    client_id = Column(String, index=True, nullable=False)
+    threat_type = Column(String, nullable=False)
+    payload = Column(Text)
+    detection = Column(JSON)
+    ir_response = Column(JSON)
+    threat_intel = Column(JSON)
+    report = Column(JSON)
+    deadman_fired = Column(Boolean, default=False)
+    final_status = Column(String, nullable=False)
+
+
+# ==========================================
+# REPOSITORY FUNCTIONS (Database Access)
+# ==========================================
 
 def init_db():
-    """
-    Creates the database and all tables on first run.
-    Safe to call multiple times — uses IF NOT EXISTS.
-    """
-    with get_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS incidents (
-                id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp   TEXT    NOT NULL,
-                client_id   TEXT    NOT NULL,
-                agent       TEXT    NOT NULL,
-                status      TEXT    NOT NULL,
-                threat_level TEXT   NOT NULL,
-                payload     TEXT,
-                result      TEXT    NOT NULL
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS pipeline_runs (
-                id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp       TEXT    NOT NULL,
-                client_id       TEXT    NOT NULL,
-                threat_type     TEXT    NOT NULL,
-                payload         TEXT,
-                detection       TEXT,
-                ir_response     TEXT,
-                threat_intel    TEXT,
-                report          TEXT,
-                deadman_fired   INTEGER DEFAULT 0,
-                final_status    TEXT    NOT NULL
-            )
-        """)
-        # Migration: Add client_id if it's missing (for existing users)
-        try:
-            conn.execute("ALTER TABLE incidents ADD COLUMN client_id TEXT DEFAULT 'Global'")
-            conn.execute("ALTER TABLE pipeline_runs ADD COLUMN client_id TEXT DEFAULT 'Global'")
-        except sqlite3.OperationalError:
-            pass # Column already exists
-        conn.commit()
-    logger.info("Guard SOC database initialised at %s", DB_PATH)
+    """Initialises the database tables."""
+    Base.metadata.create_all(bind=engine)
+    logger.info("GUARD Database initialised.")
 
+def get_db():
+    """Provides a session to FastAPI endpoints."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-def save_incident(client_id: str, agent: str, status: str, threat_level: str, payload: str, result: dict) -> int:
-    """
-    Saves a single detection agent result to the incidents table.
-    Returns the new row ID.
-    """
-    with get_connection() as conn:
-        cursor = conn.execute(
-            """
-            INSERT INTO incidents (timestamp, client_id, agent, status, threat_level, payload, result)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                datetime.utcnow().isoformat(),
-                client_id,
-                agent,
-                status,
-                threat_level,
-                str(payload)[:2000],  # cap payload size
-                json.dumps(result)
-            )
+# --- Sync wrappers for existing agent logic ---
+
+def save_incident(client_id: str, agent: str, status: str, threat_level: str, payload: str, result: dict):
+    db = SessionLocal()
+    try:
+        new_incident = Incident(
+            client_id=client_id,
+            agent=agent,
+            status=status,
+            threat_level=threat_level,
+            payload=str(payload)[:2000],
+            result=result
         )
-        conn.commit()
-        incident_id = cursor.lastrowid
-        logger.info("Incident #%d saved — Agent: %s | Status: %s | Level: %s", incident_id, agent, status, threat_level)
-        return incident_id
+        db.add(new_incident)
+        db.commit()
+        db.refresh(new_incident)
+        return new_incident.id
+    finally:
+        db.close()
 
-
-def save_pipeline_run(
-    client_id: str,
-    threat_type: str,
-    payload: str,
-    detection: dict,
-    ir_response: dict = None,
-    threat_intel: dict = None,
-    report: dict = None,
-    deadman_fired: bool = False,
-    final_status: str = "COMPLETED"
-) -> int:
-    """
-    Saves a complete orchestrator pipeline run to the pipeline_runs table.
-    Returns the new row ID.
-    """
-    with get_connection() as conn:
-        cursor = conn.execute(
-            """
-            INSERT INTO pipeline_runs
-                (timestamp, client_id, threat_type, payload, detection, ir_response, threat_intel, report, deadman_fired, final_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                datetime.utcnow().isoformat(),
-                client_id,
-                threat_type,
-                str(payload)[:2000],
-                json.dumps(detection) if detection else None,
-                json.dumps(ir_response) if ir_response else None,
-                json.dumps(threat_intel) if threat_intel else None,
-                json.dumps(report) if report else None,
-                1 if deadman_fired else 0,
-                final_status
-            )
+def save_pipeline_run(client_id, threat_type, payload, detection, ir_response=None, threat_intel=None, report=None, deadman_fired=False, final_status="COMPLETED"):
+    db = SessionLocal()
+    try:
+        new_run = PipelineRun(
+            client_id=client_id,
+            threat_type=threat_type,
+            payload=str(payload)[:2000],
+            detection=detection,
+            ir_response=ir_response,
+            threat_intel=threat_intel,
+            report=report,
+            deadman_fired=deadman_fired,
+            final_status=final_status
         )
-        conn.commit()
-        run_id = cursor.lastrowid
-        logger.info("Pipeline run #%d saved — Type: %s | Final: %s | Deadman: %s", run_id, threat_type, final_status, deadman_fired)
-        return run_id
+        db.add(new_run)
+        db.commit()
+        db.refresh(new_run)
+        return new_run.id
+    finally:
+        db.close()
 
+def get_all_incidents(limit: int = 100, client_id: str = "Admin"):
+    db = SessionLocal()
+    try:
+        query = db.query(Incident)
+        if client_id != "Admin":
+            query = query.filter(Incident.client_id == client_id)
+        return [inc.__dict__ for inc in query.order_by(Incident.id.desc()).limit(limit).all()]
+    finally:
+        db.close()
 
-def get_all_incidents(limit: int = 100, client_id: str = "Admin") -> list:
-    """Returns the most recent incidents, filtered by client unless identity is 'Admin'."""
-    with get_connection() as conn:
+def get_all_pipeline_runs(limit: int = 50, client_id: str = "Admin"):
+    db = SessionLocal()
+    try:
+        query = db.query(PipelineRun)
+        if client_id != "Admin":
+            query = query.filter(PipelineRun.client_id == client_id)
+        return [run.__dict__ for run in query.order_by(PipelineRun.id.desc()).limit(limit).all()]
+    finally:
+        db.close()
+
+def get_incident_stats(client_id: str = "Admin"):
+    db = SessionLocal()
+    try:
         if client_id == "Admin":
-            rows = conn.execute(
-                "SELECT * FROM incidents ORDER BY id DESC LIMIT ?", (limit,)
-            ).fetchall()
+            total = db.query(Incident).count()
+            dangerous = db.query(Incident).filter(Incident.status == "DANGEROUS").count()
+            critical = db.query(Incident).filter(Incident.threat_level == "CRITICAL").count()
+            runs = db.query(PipelineRun).count()
+            deadman = db.query(PipelineRun).filter(PipelineRun.deadman_fired == True).count()
         else:
-            rows = conn.execute(
-                "SELECT * FROM incidents WHERE client_id = ? ORDER BY id DESC LIMIT ?", (client_id, limit)
-            ).fetchall()
-        return [dict(r) for r in rows]
+            total = db.query(Incident).filter(Incident.client_id == client_id).count()
+            dangerous = db.query(Incident).filter(Incident.client_id == client_id, Incident.status == "DANGEROUS").count()
+            critical = db.query(Incident).filter(Incident.client_id == client_id, Incident.threat_level == "CRITICAL").count()
+            runs = db.query(PipelineRun).filter(PipelineRun.client_id == client_id).count()
+            deadman = db.query(PipelineRun).filter(Incident.client_id == client_id, PipelineRun.deadman_fired == True).count()
 
-
-def get_all_pipeline_runs(limit: int = 50, client_id: str = "Admin") -> list:
-    """Returns the most recent pipeline runs, filtered by client unless identity is 'Admin'."""
-    with get_connection() as conn:
-        if client_id == "Admin":
-            rows = conn.execute(
-                "SELECT * FROM pipeline_runs ORDER BY id DESC LIMIT ?", (limit,)
-            ).fetchall()
-        else:
-            rows = conn.execute(
-                "SELECT * FROM pipeline_runs WHERE client_id = ? ORDER BY id DESC LIMIT ?", (client_id, limit)
-            ).fetchall()
-        return [dict(r) for r in rows]
-
-
-def get_incident_stats(client_id: str = "Admin") -> dict:
-    """Returns aggregate stats, filtered by client unless identity is 'Admin'."""
-    with get_connection() as conn:
-        if client_id == "Admin":
-            total = conn.execute("SELECT COUNT(*) FROM incidents").fetchone()[0]
-            dangerous = conn.execute("SELECT COUNT(*) FROM incidents WHERE status = 'DANGEROUS'").fetchone()[0]
-            critical = conn.execute("SELECT COUNT(*) FROM incidents WHERE threat_level = 'CRITICAL'").fetchone()[0]
-            pipeline_runs = conn.execute("SELECT COUNT(*) FROM pipeline_runs").fetchone()[0]
-            deadman_activations = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE deadman_fired = 1").fetchone()[0]
-        else:
-            total = conn.execute("SELECT COUNT(*) FROM incidents WHERE client_id = ?", (client_id,)).fetchone()[0]
-            dangerous = conn.execute("SELECT COUNT(*) FROM incidents WHERE client_id = ? AND status = 'DANGEROUS'", (client_id,)).fetchone()[0]
-            critical = conn.execute("SELECT COUNT(*) FROM incidents WHERE client_id = ? AND threat_level = 'CRITICAL'", (client_id,)).fetchone()[0]
-            pipeline_runs = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE client_id = ?", (client_id,)).fetchone()[0]
-            deadman_activations = conn.execute("SELECT COUNT(*) FROM pipeline_runs WHERE client_id = ? AND deadman_fired = 1", (client_id,)).fetchone()[0]
-        
         return {
             "identity": client_id,
             "total_incidents": total,
             "dangerous_incidents": dangerous,
             "critical_incidents": critical,
-            "total_pipeline_runs": pipeline_runs,
-            "deadman_activations": deadman_activations
+            "total_pipeline_runs": runs,
+            "deadman_activations": deadman
         }
+    finally:
+        db.close()

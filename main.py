@@ -8,9 +8,9 @@ from core.database import init_db
 from core.auth import require_api_key  # for testing
 
 app = FastAPI(
-    title="Guard SOC Platform",
-    description="AI-powered Security Operations Center for real-time threat detection.",
-    version="1.0.0"
+    title="GUARD Security Platform",
+    description="Enterprise-grade AI Security Operations Center.",
+    version="1.2.0"
 )
 
 # Enable CORS for frontend integration
