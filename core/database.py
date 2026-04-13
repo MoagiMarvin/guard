@@ -17,6 +17,9 @@ logger = logging.getLogger(__name__)
 
 # Choose engine based on environment
 DATABASE_URL = os.getenv("DATABASE_URL")
+if DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.strip()
+
 if not DATABASE_URL:
     # Fallback to local SQLite if no DATABASE_URL is provided
     DATABASE_URL = "sqlite:///./guard_soc.db"
@@ -80,6 +83,14 @@ class PipelineRun(Base):
     report = Column(JSON)
     deadman_fired = Column(Boolean, default=False)
     final_status = Column(String, nullable=False)
+
+class AICache(Base):
+    """Caches AI responses to save quota and improve performance."""
+    __tablename__ = "ai_cache"
+    id = Column(Integer, primary_key=True, index=True)
+    cache_key = Column(String, unique=True, index=True, nullable=False) # agent:payload_hash
+    response = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 # ==========================================
@@ -174,7 +185,7 @@ def get_incident_stats(client_id: str = "Admin"):
             dangerous = db.query(Incident).filter(Incident.client_id == client_id, Incident.status == "DANGEROUS").count()
             critical = db.query(Incident).filter(Incident.client_id == client_id, Incident.threat_level == "CRITICAL").count()
             runs = db.query(PipelineRun).filter(PipelineRun.client_id == client_id).count()
-            deadman = db.query(PipelineRun).filter(Incident.client_id == client_id, PipelineRun.deadman_fired == True).count()
+            deadman = db.query(PipelineRun).filter(PipelineRun.client_id == client_id, PipelineRun.deadman_fired == True).count()
 
         return {
             "identity": client_id,

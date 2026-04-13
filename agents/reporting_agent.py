@@ -3,6 +3,7 @@ import json
 import logging
 from dotenv import load_dotenv
 import google.generativeai as genai
+from core.database import get_cached_ai, set_cached_ai
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +23,12 @@ def reporting_agent(incident_logs: list) -> dict:
         return {"status": "NO_INCIDENTS", "report": "No incidents to report.", "executive_summary": "All systems nominal."}
 
     logs_string = json.dumps(incident_logs, indent=2)
+
+    # --- Quota Guard: Caching Layer ---
+    cached = get_cached_ai("reporting", logs_string)
+    if cached:
+        logger.info("Quota Guard: Using cached incident report.")
+        return cached
 
     prompt = f"""
     You are the Chief Information Security Officer (CISO) Reporting AI.
@@ -48,13 +55,17 @@ def reporting_agent(incident_logs: list) -> dict:
         )
         parsed = json.loads(response.text)
         
-        return {
+        result = {
             "log": "Executive Reporting Completed",
             "classification": parsed.get("classification", "UNKNOWN"),
             "executive_summary": parsed.get("executive_summary", "Summary unavailable."),
             "timeline_reconstructed": parsed.get("timeline_reconstructed", []),
             "remaining_risk": parsed.get("remaining_risk", "Unknown.")
         }
+
+        # Save to cache
+        set_cached_ai("reporting", logs_string, result)
+        return result
     except Exception as e:
         logger.error(f"Reporting AI Error: {e}")
         return {

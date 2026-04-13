@@ -11,6 +11,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+from core.database import get_cached_ai, set_cached_ai
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel("gemini-2.5-flash")
@@ -21,11 +22,24 @@ def public_web_scan(url: str) -> dict:
     Used for Lead Generation / Marketing on the dashboard.
     """
     if not url:
-        return {"status": "FAIL", "reason": "No URL provided"}
+        return {
+            "url": "none",
+            "status": "FAIL",
+            "score": 0,
+            "risks_found": ["No URL provided"],
+            "priority_fix": "Enter a valid website URL.",
+            "sales_pitch": "Guard SOC requires a target to perform analysis."
+        }
     
     # Ensure URL protocol exists
     if not url.startswith("http"):
         url = "https://" + url
+
+    # --- Quota Guard: Caching Layer ---
+    cached = get_cached_ai("public_scan", url)
+    if cached:
+        logger.info(f"Quota Guard: Using cached scan for {url}")
+        return cached
 
     try:
         # Fetching only the headers to stay non-invasive
@@ -59,7 +73,7 @@ def public_web_scan(url: str) -> dict:
         ai_res = model.generate_content(prompt, generation_config={"response_mime_type": "application/json"})
         parsed = json.loads(ai_res.text)
         
-        return {
+        result = {
             "url": url,
             "status": "COMPLETED",
             "score": parsed.get("score", 0),
@@ -68,6 +82,10 @@ def public_web_scan(url: str) -> dict:
             "sales_pitch": parsed.get("sales_pitch", "Protect your infrastructure from real-time attacks now."),
             "raw_headers_analyzed": len(headers)
         }
+        
+        # Save to cache
+        set_cached_ai("public_scan", url, result)
+        return result
     except Exception as e:
         logger.error(f"Public Scan Error: {e}")
         return {
@@ -86,6 +104,12 @@ def vuln_scanner_agent(system_config: str) -> dict:
     """
     if not system_config:
         return {"status": "SAFE", "reason": "No configuration provided", "threat_level": "NONE"}
+
+    # --- Quota Guard: Caching Layer ---
+    cached = get_cached_ai("vuln_scan", system_config)
+    if cached:
+        logger.info("Quota Guard: Using cached vuln scan.")
+        return cached
 
     prompt = f"""
     You are an elite Offensive Security Engineer and Software Vulnerability Analyst.
@@ -112,7 +136,7 @@ def vuln_scanner_agent(system_config: str) -> dict:
         )
         parsed = json.loads(response.text)
         
-        return {
+        result = {
             "log": "Vulnerability Scan",
             "vulnerability_found": parsed.get("vulnerability_found", False),
             "threat_level": parsed.get("threat_level", "SAFE"),
@@ -120,6 +144,10 @@ def vuln_scanner_agent(system_config: str) -> dict:
             "attack_vector": parsed.get("attack_vector", "None"),
             "remediation": parsed.get("remediation", "System secure.")
         }
+        
+        # Save to cache
+        set_cached_ai("vuln_scan", system_config, result)
+        return result
     except Exception as e:
         logger.error(f"Vuln Scanner AI Error: {e}")
         return {

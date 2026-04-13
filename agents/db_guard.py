@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 import json
 import logging
+from core.database import get_cached_ai, set_cached_ai
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +17,12 @@ model = genai.GenerativeModel("gemini-2.5-flash") # Using 2.5-flash as requested
 def db_guard_agent(query: str) -> dict:
     if not query:
         return {"status": "SAFE", "reason": "Empty query", "threat_level": "NONE"}
+
+    # --- Quota Guard: Caching Layer ---
+    cached = get_cached_ai("db_guard", query)
+    if cached:
+        logger.info(f"Quota Guard: Using cached response for query.")
+        return cached
 
     # --- Pre-check layer (Fast & Free) ---
     suspicious_patterns = ["' OR", "UNION SELECT", "DROP TABLE", "--", ";", "OR 1=1"]
@@ -46,13 +53,17 @@ def db_guard_agent(query: str) -> dict:
         )
         parsed = json.loads(response.text)
         
-        return {
+        result = {
             "query": query,
             "status": parsed.get("status", "UNKNOWN"),
             "threat_level": parsed.get("threat_level", "UNKNOWN"),
             "reason": parsed.get("reason", ""),
             "recommendation": parsed.get("recommendation", "")
         }
+
+        # Save to cache
+        set_cached_ai("db_guard", query, result)
+        return result
     except Exception as e:
         logger.error(f"AI Agent Error: {e}")
         return {

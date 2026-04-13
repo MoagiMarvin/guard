@@ -2,15 +2,23 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from contextlib import asynccontextmanager
 import os
 from api.routes import router as api_router
 from core.database import init_db
 from core.auth import require_api_key  # for testing
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialise the database and all tables on server start."""
+    init_db()
+    yield
+
 app = FastAPI(
     title="GUARD Security Platform",
     description="Enterprise-grade AI Security Operations Center.",
-    version="1.2.0"
+    version="1.2.0",
+    lifespan=lifespan
 )
 
 # Enable CORS for frontend integration
@@ -21,11 +29,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialise the database and all tables on server start."""
-    init_db()
 
 # Mount the static directory to serve CSS/JS (if needed)
 static_dir = os.path.join(os.path.dirname(__file__), "static")
