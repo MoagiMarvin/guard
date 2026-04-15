@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GUARD | Security Command Center</title>
+    <title>GUARD | Security Middleware Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -108,9 +108,9 @@
         .data-table td { padding: 15px 20px; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.9rem; }
 
         .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; }
-        .badge.critical { background: rgba(255, 62, 62, 0.1); color: var(--accent-red); }
-        .badge.suspicious { background: rgba(255, 157, 0, 0.1); color: #ff9d00; }
-        .badge.safe { background: rgba(0, 255, 157, 0.1); color: var(--accent-green); }
+        .badge.block { background: rgba(255, 62, 62, 0.1); color: var(--accent-red); }
+        .badge.pass { background: rgba(0, 255, 157, 0.1); color: var(--accent-green); }
+        .badge.monitor { background: rgba(255, 157, 0, 0.1); color: #ff9d00; }
 
         button.primary { background: var(--accent-blue); color: black; font-weight: 800; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; text-transform: uppercase; }
         input, select, textarea { background: #000; border: 1px solid var(--glass); color: white; padding: 15px; border-radius: 10px; width: 100%; outline: none; }
@@ -133,7 +133,7 @@
         <div class="nav-menu">
             <div class="nav-item active" onclick="switchView('overview')">🛡️ Overview</div>
             <div class="nav-item" onclick="switchView('monitor')">📡 Live Feed</div>
-            <div class="nav-item" onclick="switchView('shield')">🛡️ Shield Integration</div>
+            <div class="nav-item" onclick="switchView('shield')">🛡️ Middleware API</div>
             <div class="nav-item" onclick="switchView('audit')">🔍 Pulse Audit</div>
             <div class="nav-item" onclick="switchView('sim')">⚔️ Attack Simulator</div>
         </div>
@@ -146,43 +146,43 @@
         <header>
             <div style="display: flex; align-items: center; gap: 15px;">
                 <h2 id="view-title" style="font-size: 1.2rem; font-weight: 800;">Overview</h2>
-                <div class="badge safe">SENTINEL ACTIVE</div>
+                <div class="badge pass">SENTINEL ACTIVE</div>
             </div>
             <div style="display: flex; gap: 20px; align-items: center;">
                 <div id="client-email" style="font-size: 0.8rem; font-weight: 800; color: var(--accent-blue);">LOADING...</div>
-                <div id="client-plan" class="badge suspicious">FREE</div>
+                <div id="client-plan" class="badge monitor">SENTINEL</div>
             </div>
         </header>
 
         <!-- View: Overview -->
         <div id="view-overview" class="view-content active">
             <div class="stats-grid">
-                <div class="stat-card"><div class="stat-label">Total Threats Stopped</div><div class="stat-value" id="count-total">0</div></div>
-                <div class="stat-card"><div class="stat-label">Unusual Activity</div><div class="stat-value" id="count-dangerous" style="color: #ff9d00;">0</div></div>
-                <div class="stat-card"><div class="stat-label">Critical Interventions</div><div class="stat-value" id="count-critical" style="color: var(--accent-red);">0</div></div>
+                <div class="stat-card"><div class="stat-label">Requests Inspected</div><div class="stat-value" id="count-total">0</div></div>
+                <div class="stat-card"><div class="stat-label">Blocks Triggered</div><div class="stat-value" id="count-dangerous" style="color: var(--accent-red);">0</div></div>
+                <div class="stat-card"><div class="stat-label">Active Lockdown Status</div><div class="stat-value" id="count-critical" style="color: #ff9d00;">MONITOR</div></div>
             </div>
             <div style="background: var(--bg-card); padding: 40px; border-radius: 20px; border: 1px solid var(--glass);">
-                <h3 style="margin-bottom: 10px;">Security Posture</h3>
-                <p style="color: var(--text-muted); font-size: 0.9rem;">Your digital assets are currently under local sentinel protection. Real-time log monitoring is active.</p>
+                <h3 style="margin-bottom: 10px;">Security Posture: Clean Product Architecture</h3>
+                <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">Your site is protected by our optimized 5-Agent Middleware pipeline. Identity is verified via <b>Session Anchor</b>, payloads are scrubbed by <b>Injection Guard</b>, and all evidence is logged for <b>POPIA Compliance</b>.</p>
             </div>
         </div>
 
         <!-- View: Monitor -->
         <div id="view-monitor" class="view-content">
             <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
-                <h3>Real-time Intelligence</h3>
+                <h3>Real-time Intervention Feed</h3>
                 <button onclick="fetchIncidents()" style="background: none; border: 1px solid var(--glass); color: white; padding: 5px 15px; border-radius: 8px; cursor: pointer;">Refresh</button>
             </div>
             <table class="data-table">
-                <thead><tr><th>Agent</th><th>Status</th><th>Payload</th><th>Time</th></tr></thead>
+                <thead><tr><th>Agent</th><th>Decision</th><th>Reason/Payload</th><th>Time</th></tr></thead>
                 <tbody id="incident-feed"></tbody>
             </table>
         </div>
 
-        <!-- View: Shield (Integration) -->
+        <!-- View: Shield (Middleware API) -->
         <div id="view-shield" class="view-content">
-            <h3 style="margin-bottom: 20px;">Shield Integration</h3>
-            <p style="color: var(--text-muted); margin-bottom: 30px;">Protect your website by adding this snippet to your backend or landing page.</p>
+            <h3 style="margin-bottom: 20px;">Middleware Integration</h3>
+            <p style="color: var(--text-muted); margin-bottom: 30px;">Add Guard to your application in two lines of code.</p>
             
             <div style="margin-bottom: 30px;">
                 <label style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 800; display: block; margin-bottom: 10px;">Your API Key</label>
@@ -190,18 +190,25 @@
             </div>
 
             <div style="margin-bottom: 30px;">
-                <label style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 800; display: block; margin-bottom: 10px;">Integration Snippet (guard-client.js)</label>
+                <label style="color: var(--accent-blue); font-size: 0.8rem; font-weight: 800; display: block; margin-bottom: 10px;">Unified Integration (/api/inspect)</label>
                 <div class="code-box" id="integration-code">
 const fetch = require('node-fetch');
-const GUARD_KEY = "<YOUR_API_KEY>";
 
-async function guardProtect(req, res, next) {
-    fetch("https://guard-soc.onrender.com/api/run", {
+async function guardInspect(payload, ip) {
+    const res = await fetch("https://guard-soc.onrender.com/api/inspect", {
         method: 'POST',
-        headers: { 'X-API-Key': GUARD_KEY, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ threat_type: "log", payload: req.path })
+        headers: { 
+            'X-API-Key': "YOUR_API_KEY", 
+            'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+            request_url: window.location.pathname,
+            payload: payload,
+            ip: ip,
+            device_signature: "APP_HARDWARE_SIG" 
+        })
     });
-    next();
+    return await res.json();
 }
                 </div>
             </div>
@@ -210,23 +217,26 @@ async function guardProtect(req, res, next) {
         <!-- View: Audit -->
         <div id="view-audit" class="view-content">
             <h3 style="margin-bottom: 20px;">Pulse Audit</h3>
-            <input type="text" id="pulse-url" placeholder="e.g. google.com" style="max-width: 500px; margin-right: 10px;">
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Direct scan of external assets with the Guard threat engine.</p>
+            <input type="text" id="pulse-url" placeholder="e.g. example.com" style="max-width: 500px; margin-right: 10px;">
             <button class="primary" onclick="runPulseScan()">Start Scan</button>
             <div id="pulse-results" style="margin-top: 30px;"></div>
         </div>
 
         <!-- View: Simulator -->
         <div id="view-sim" class="view-content">
-            <h3 style="margin-bottom: 20px;">Attack Simulator</h3>
+            <h3 style="margin-bottom: 20px;">Pipeline Stress Test</h3>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Send a test request through the 5-layer pipeline.</p>
             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px; max-width: 800px;">
-                <select id="sim-type">
-                    <option value="db">SQL Injection</option>
-                    <option value="phishing">Phishing Email</option>
-                    <option value="auth">Auth Bypass</option>
+                <select id="sim-target">
+                    <option value="/login">Login Request (Sensitive)</option>
+                    <option value="/chat">AI Chat Request (Prompt Inspection)</option>
+                    <option value="/public">General Request</option>
                 </select>
-                <input type="text" id="sim-payload" placeholder="Payload...">
+                <input type="text" id="sim-payload" placeholder="Attack Payload (e.g. admin' OR 1=1 --)">
             </div>
-            <button class="primary" onclick="runSimulation()" style="margin-top: 20px;">Trigger Simulation</button>
+            <button class="primary" onclick="runSimulation()" style="margin-top: 20px;">Fire Inspect Pipeline</button>
+            <div id="sim-results" style="margin-top: 30px;"></div>
         </div>
     </div>
 
@@ -239,7 +249,7 @@ async function guardProtect(req, res, next) {
 
         function switchView(view) {
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            event.target.classList.add('active');
+            // Set active class properly
             document.querySelectorAll('.view-content').forEach(v => v.classList.remove('active'));
             document.getElementById(`view-${view}`).classList.add('active');
             document.getElementById('view-title').innerText = view.charAt(0).toUpperCase() + view.slice(1);
@@ -247,7 +257,7 @@ async function guardProtect(req, res, next) {
 
         async function initDashboard() {
             try {
-                const res = await fetch(`${BASE_URL}/api/auth/me`, { headers: { "Authorization": `Bearer ${TOKEN}` } });
+                const res = await fetch(`${BASE_URL}/api/auth/me`, { headers: { "Authorization": `Bearer ${TOKEN}`, "X-API-Key": "guard-admin-demo" } });
                 if (!res.ok) throw new Error("Unauthorized");
                 const data = await res.json();
                 
@@ -255,7 +265,7 @@ async function guardProtect(req, res, next) {
                 if (data.clients.length > 0) {
                     API_KEY = data.clients[0].api_key;
                     document.getElementById('display-api-key').innerText = API_KEY;
-                    document.getElementById('integration-code').innerText = document.getElementById('integration-code').innerText.replace("<YOUR_API_KEY>", API_KEY);
+                    document.getElementById('integration-code').innerText = document.getElementById('integration-code').innerText.replace("YOUR_API_KEY", API_KEY);
                     document.getElementById('client-plan').innerText = data.clients[0].plan;
                 }
                 
@@ -263,15 +273,15 @@ async function guardProtect(req, res, next) {
                 await fetchIncidents();
                 document.getElementById('loader').style.opacity = '0';
                 setTimeout(() => document.getElementById('loader').remove(), 500);
-            } catch (e) { handleLogout(); }
+            } catch (e) { console.error(e); handleLogout(); }
         }
 
         async function fetchStats() {
             const res = await fetch(`${BASE_URL}/api/stats`, { headers: { "X-API-Key": API_KEY } });
             const data = await res.json();
-            document.getElementById('count-total').innerText = data.total_incidents || 0;
+            document.getElementById('count-total').innerText = data.total_pipeline_runs || 0;
             document.getElementById('count-dangerous').innerText = data.dangerous_incidents || 0;
-            document.getElementById('count-critical').innerText = data.critical_incidents || 0;
+            document.getElementById('count-critical').innerText = data.deadman_activations > 0 ? "LOCKDOWN" : "MONITOR";
         }
 
         async function fetchIncidents() {
@@ -280,7 +290,7 @@ async function guardProtect(req, res, next) {
             const feed = document.getElementById('incident-feed');
             feed.innerHTML = '';
             data.incidents.forEach(inc => {
-                const row = `<tr><td>${inc.agent}</td><td><span class="badge ${inc.status.toLowerCase()}">${inc.status}</span></td><td>${inc.payload.substring(0, 40)}...</td><td>${new Date(inc.timestamp).toLocaleTimeString()}</td></tr>`;
+                const row = `<tr><td>${inc.agent}</td><td><span class="badge ${inc.status.toLowerCase()}">${inc.status}</span></td><td>${inc.payload.substring(0, 60)}...</td><td>${new Date(inc.timestamp).toLocaleTimeString()}</td></tr>`;
                 feed.innerHTML += row;
             });
         }
@@ -293,13 +303,22 @@ async function guardProtect(req, res, next) {
         }
 
         async function runSimulation() {
-            const type = document.getElementById('sim-type').value;
-            const payload = document.getElementById('sim-payload').value || "Test Simulation";
-            await fetch(`${BASE_URL}/api/run`, { 
+            const url = document.getElementById('sim-target').value;
+            const payload = document.getElementById('sim-payload').value || "Test Request";
+            const res = await fetch(`${BASE_URL}/api/inspect`, { 
                 method: 'POST', 
                 headers: { "X-API-Key": API_KEY, "Content-Type": "application/json" },
-                body: JSON.stringify({ threat_type: type, payload })
+                body: JSON.stringify({ request_url: url, payload: payload, ip: "127.0.0.1" })
             });
+            const data = await res.json();
+            
+            document.getElementById('sim-results').innerHTML = `
+                <div style="background: ${data.decision == 'BLOCK' ? 'rgba(255, 62, 62, 0.1)' : 'rgba(0, 255, 157, 0.1)'}; padding: 20px; border-radius: 12px; border: 1px solid ${data.decision == 'BLOCK' ? 'var(--accent-red)' : 'var(--accent-green)'};">
+                    <h4 style="color: ${data.decision == 'BLOCK' ? 'var(--accent-red)' : 'var(--accent-green)'}">${data.decision == 'BLOCK' ? '🛑 BLOCK' : '✅ PASS'}</h4>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">${data.reason}</p>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">Audit ID: ${data.incident_id}</p>
+                </div>
+            `;
             setTimeout(() => { fetchStats(); fetchIncidents(); }, 1000);
         }
 

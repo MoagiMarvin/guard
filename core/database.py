@@ -52,6 +52,7 @@ class Client(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     site_name = Column(String, nullable=False)
     api_key = Column(String, unique=True, index=True, nullable=False)
+    device_public_key = Column(String, nullable=True) # For Session Anchor binding
     plan_type = Column(String, default="FREE")  # FREE, SENTINEL, ENTERPRISE
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -195,5 +196,54 @@ def get_incident_stats(client_id: str = "Admin"):
             "total_pipeline_runs": runs,
             "deadman_activations": deadman
         }
+    finally:
+        db.close()
+
+def get_cached_ai(agent_name: str, payload: str) -> dict:
+    """Retrieves a cached AI response if available."""
+    db = SessionLocal()
+    try:
+        import hashlib
+        cache_key = f"{agent_name}:{hashlib.sha256(payload.encode()).hexdigest()}"
+        cached = db.query(AICache).filter(AICache.cache_key == cache_key).first()
+        if cached:
+            return cached.response
+        return None
+    finally:
+        db.close()
+
+def set_cached_ai(agent_name: str, payload: str, response: dict):
+    """Saves an AI response to the cache."""
+    db = SessionLocal()
+    try:
+        import hashlib
+        cache_key = f"{agent_name}:{hashlib.sha256(payload.encode()).hexdigest()}"
+        new_cache = AICache(cache_key=cache_key, response=response)
+        db.merge(new_cache) # Use merge to handle potential races
+        db.commit()
+    finally:
+        db.close()
+
+def get_recent_block_count(client_id: str, ip: str, minutes: int = 5) -> int:
+    """Calculates how many blocks an IP has triggered recently."""
+    db = SessionLocal()
+    try:
+        from sqlalchemy import and_
+        from datetime import timedelta
+        since = datetime.utcnow() - timedelta(minutes=minutes)
+        # Search for incidents where final_decision was BLOCK and requester_ip matches
+        count = 0
+        incidents = db.query(Incident).filter(
+            and_(
+                Incident.client_id == client_id,
+                Incident.timestamp >= since,
+                Incident.status == "BLOCK"
+            )
+        ).all()
+        
+        for inc in incidents:
+            if inc.result.get("requester_ip") == ip:
+                count += 1
+        return count
     finally:
         db.close()
